@@ -168,46 +168,53 @@ loader. `vocab.txt` is optional (the fast tokenizer already embeds it).
 
 ## Runtime load — Dataflow / vLLM
 
-Per [ADR 0011](adr/0011-adopt-beam-vllm-model-handler.md), the serving path uses Beam's
-`apache_beam.ml.inference.vllm_inference.VLLMCompletionsModelHandler`. Inside
-`sdfb_beam/handlers/vllm_client.py`:
+`VLLMModelClient` (`sdfb_beam/handlers/vllm_client.py`) owns the vLLM server on
+each worker ([ADR 0014](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0014-vllm-model-client-owns-server.md), which amends
+[ADR 0011](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0011-adopt-beam-vllm-model-handler.md)). It does **not** use
+Beam's `RunInference` or `apache_beam.ml.inference.vllm_inference`: the engines
+call the model a bounded number of times per run, synchronously from inside the
+generation `DoFn`, so there is no `PCollection` of prompts for a `ModelHandler`
+to batch.
+
+```mermaid
+sequenceDiagram
+  participant D as generation DoFn (engine)
+  participant C as VLLMModelClient
+  participant G as GCS weights
+  participant V as vLLM server (subprocess)
+  D->>C: generate_json(prompt, json_schema)
+  Note over C: first call only — lazy ignition, lock-serialized
+  C->>G: list + download the model prefix → local_model_dir
+  C->>V: python -m vllm.entrypoints.openai.api_server --model <local_model_dir>
+  C->>V: poll /v1/models until ready
+  C->>V: chat.completions (response_format = json_schema)
+  V-->>C: choices
+  C-->>D: list[dict]
+  D->>C: teardown()
+```
 
 ```python
-def setup(self):
-    # One-time per worker — copy from GCS to local SSD via the Python client
-    # (NOT gsutil — the CLI would force a packages.cloud.google.com apt
-    # install into the image for no benefit).
-    from google.cloud import storage
-    bucket_name, prefix = _split_gs_uri(self.model_uri)
-    client = storage.Client()                          # ADC on worker
-    for blob in client.list_blobs(bucket_name, prefix=prefix):
-        rel = blob.name[len(prefix):]
-        if rel:
-            dest = Path("/local-ssd/model") / rel
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            blob.download_to_filename(dest)
-    # Beam's handler spawns `python -m vllm.entrypoints.openai.api_server`
-    # under the hood. Pass server flags via vllm_server_kwargs.
-    self.handler = VLLMCompletionsModelHandler(
-        model_name="/local-ssd/model",
-        vllm_server_kwargs={
-            "quantization": "awq",
-            "max-model-len": "8192",
-            "gpu-memory-utilization": "0.85",
-        },
-        max_batch_size=16,
-    )
+client = VLLMModelClient(
+    model_uri="gs://<bucket>/synthetic/models/gemma4/e4b-it/v1/",
+    vllm_server_kwargs={"max-model-len": "8192"},  # per model: config/models.yml
+)
+rows = client.generate_json(prompt, json_schema)   # ignites the server on first use
+client.teardown()
 ```
+
+Weights are pulled with the `google-cloud-storage` Python client (not `gsutil`:
+the CLI would add an apt repository to the image). A bare local path as
+`model_uri` skips the pull.
 
 `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1` are set in `docker/Dockerfile` so any accidental Hub call fails loudly. The model directory must be self-contained.
 
 ### vLLM acceptance — what the Dataflow probe must confirm
 
-GPU validation happens via a small Dataflow probe job once the image is built (e.g. a low-`num_rows` tier from [`public_cloud/deploy/gcp/run_e2e.sh`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/public_cloud/deploy/gcp/README.md), or a Composer trigger) — there's no separate laptop test (vLLM is CUDA-only). The probe must confirm the vLLM serving path:
+GPU validation happens via a small Dataflow probe job once the image is built (e.g. a low-`num_rows` tier from [`public_cloud/deploy/gcp/run_e2e.sh`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/public_cloud/deploy/gcp/README.md), or a Composer trigger) — there's no separate laptop test (vLLM is CUDA-only). The probe must confirm the vLLM serving path:
 
 - **Server loads the model** — `Gemma4ForConditionalGeneration` accepted (needs vLLM ≥ 0.21; see version note below).
 - **Thinking channel suppressed** — pass `chat_template_kwargs={"enable_thinking": False}` via the **chat** endpoint (not raw completions); otherwise the model spends the token budget on chain-of-thought and truncates the JSON.
-- **Guided JSON conforms** — `extra_body={"guided_json": schema}` yields schema-valid output ([ADR 0011](adr/0011-adopt-beam-vllm-model-handler.md)).
+- **Guided JSON conforms** — `extra_body={"guided_json": schema}` yields schema-valid output ([ADR 0011](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0011-adopt-beam-vllm-model-handler.md)).
 
 > **Version requirement (resolved 2026-05-21):** Gemma 4 (`model_type=gemma4`) needs **transformers ≥ 5.5.0**, which vLLM only adopted in **v0.20.0** (v0.21.0 deprecates transformers v4). Older vLLM fails at config parse (`rope_scaling should have a 'rope_type' key`). The `[gpu]` extra pins `vllm>=0.21.0` and `[embedding]` `transformers>=5.5.0`. vLLM has full Gemma 4 support (MoE, multimodal, reasoning, tool-use) since v0.20 — no fallback model needed. Before the probe: `uv lock`, and confirm the CUDA runtime bundled in the resolved torch wheels is supported by the Dataflow-installed NVIDIA driver.
 

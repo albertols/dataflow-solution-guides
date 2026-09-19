@@ -1,4 +1,4 @@
-#  Copyright 2026 The synthetic-llm-dataflow-bigquery Authors
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 
 The suite lives in `packages/sdfb-tests/tests` and locates repository files
 relative to that location, so it cannot be moved or symlinked here. GPU and
-GCP tests are excluded exactly as in the golden source's own CI.
+GCP tests are excluded exactly as in the source repository's own CI.
 """
 
 import pathlib

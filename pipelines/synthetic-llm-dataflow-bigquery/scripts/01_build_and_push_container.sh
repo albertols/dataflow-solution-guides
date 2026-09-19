@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#  Copyright 2026 The synthetic-llm-dataflow-bigquery Authors
+#  Copyright 2026 Google LLC
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [[ -n "${PROJECT:-}" ]] || source "${SCRIPT_DIR}/00_set_variables.sh"
 cd "${SCRIPT_DIR}/.."
 
-GIT_COMMIT="$(python3 -c 'import json; print(json.load(open(".sync-source.json"))["sha"][:12])' 2>/dev/null || echo unknown)"
+# Stamped into the image and logged by every job, so a run names its build.
+GIT_COMMIT="$(git rev-parse --short=12 HEAD 2>/dev/null || echo unknown)"
 
 gcloud builds submit \
   --project="${PROJECT}" \

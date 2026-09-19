@@ -3,10 +3,10 @@
 This pipeline is part of the [Dataflow synthetic data generation solution guide](../../use_cases/Synthetic_Data_Generation.md).
 
 > [!NOTE]
-> **This directory is a synchronized replica.** The golden source is
-> [albertols/synthetic-llm-dataflow-bigquery](https://github.com/albertols/synthetic-llm-dataflow-bigquery);
-> `.sync-source.json` records the exact commit. Open issues and pull requests
-> there: files here are replaced by the next sync.
+> Developed at [albertols/synthetic-llm-dataflow-bigquery](https://github.com/albertols/synthetic-llm-dataflow-bigquery),
+> where the decision records and run reports live. This copy corresponds to
+> release `v0.5.2` ([`4cba0b6053cf`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/tree/4cba0b6053cf7e9b28434d339ff6e927c981b041)); updates arrive
+> here as ordinary pull requests.
 
 ## Deploy and run on Google Cloud
 
@@ -67,8 +67,8 @@ Terraform directory.
 
 [![CI](https://github.com/albertols/synthetic-llm-dataflow-bigquery/actions/workflows/ci.yml/badge.svg)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/albertols/synthetic-llm-dataflow-bigquery?label=release&color=0f9d58)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/releases)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](pyproject.toml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11-blue.svg)](pyproject.toml)
 [![Apache Beam](https://img.shields.io/badge/Apache%20Beam-Dataflow-ff6d00.svg)](https://beam.apache.org/)
 [![LLM](https://img.shields.io/badge/LLM-self--hosted%20vLLM-6f42c1.svg)](#cpugpu-split--vllm-serving)
 [![Beam Summit](https://img.shields.io/badge/Beam%20Summit-2025-4285f4.svg)](https://beamsummit.org)
@@ -77,8 +77,9 @@ Terraform directory.
 > [!NOTE]
 > **Part of the [Google Cloud Dataflow Solution Guides](https://github.com/GoogleCloudPlatform/dataflow-solution-guides)**
 > as the *synthetic data generation* guide: Terraform infrastructure, launch scripts and a relational demo
-> on the public `thelook_ecommerce` dataset. This repository is the **golden source**; the guide's copy is
-> generated from a tagged release by `/dsg-sync` ([ADR 0040](docs/adr/0040-dsg-donation-golden-source-sync.md)).
+> on the public `thelook_ecommerce` dataset. Development happens in
+> [albertols/synthetic-llm-dataflow-bigquery](https://github.com/albertols/synthetic-llm-dataflow-bigquery); the guide's
+> copy is generated from a tagged release ([ADR 0040](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0040-dsg-donation-golden-source-sync.md)).
 
 **Synthetic BigQuery data with self-hosted LLMs on Apache Beam / Dataflow.**
 
@@ -109,7 +110,7 @@ Teams need realistic tabular data for development, testing, and analytics protot
 
 This pipeline reads a table's DDL and a bounded reference sample (≤10k rows, deterministic `FARM_FINGERPRINT` ordering), runs open-weight LLMs entirely inside your own cloud project, and writes validated synthetic rows back to BigQuery — with **memorization measured and gated on every run**. The fully self-hosted design (no data egress, open-weight models only, auditable per-run quality records) aligns directly with EU AI Act and data-sensitivity expectations.
 
-**Status.** Both generation engines, relational PK/FK generation, stats-driven fidelity and the validation, dead-letter and audit chain are in place, and they have run on Dataflow GPU workers: single tables at 1M and 10M rows, and a five-table relational model in one job. What changed in each release is in the [changelog](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/CHANGELOG.md), the [releases page](https://github.com/albertols/synthetic-llm-dataflow-bigquery/releases) and the [measured release history](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/docs/releases/README.md). The evaluation framework (Tier-1/2/3 metrics) still lives on the `ws3-eval-framework` branch.
+**Status.** Both generation engines, relational PK/FK generation, stats-driven fidelity and the validation, dead-letter and audit chain are in place, and they have run on Dataflow GPU workers: single tables at 1M and 10M rows, and a five-table relational model in one job. What changed in each release is in the [changelog](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/CHANGELOG.md), the [releases page](https://github.com/albertols/synthetic-llm-dataflow-bigquery/releases) and the [measured release history](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/releases/README.md). The evaluation framework (Tier-1/2/3 metrics) still lives on the `ws3-eval-framework` branch.
 
 ## Architecture at a glance
 
@@ -119,20 +120,22 @@ One Dataflow job generates parent and child tables with FK integrity by construc
 
 Plain flow: `BigQuery (DDL + reference sample) → Dataflow GPU workers (GCS model weights warm-pulled; vLLM spawned in-worker; multi-threaded inference) → BigQuery (landing + DLQ + audit tables)`.
 
-The single-job relational shape (parents generated first, their landed keys reaching the children in the same job) is [ADR 0030](docs/adr/0030-single-job-relational-generation.md); since v0.3.0 a child is generated *from* those keys rather than sampling a key pool ([ADR 0036](docs/adr/0036-parent-driven-fanout-generation.md)) — see [Relational generation](#relational-generation-pkfk). The diagram source is [`docs/assets/architecture-overview.drawio`](docs/assets/architecture-overview.drawio).
+The single-job relational shape (parents generated first, their landed keys reaching the children in the same job) is [ADR 0030](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0030-single-job-relational-generation.md); since v0.3.0 a child is generated *from* those keys rather than sampling a key pool ([ADR 0036](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0036-parent-driven-fanout-generation.md)) — see [Relational generation](#relational-generation-pkfk). The diagram source is [`docs/assets/architecture-overview.drawio`](docs/assets/architecture-overview.drawio).
 
 ## Generation engines
 
-Two interchangeable engines behind one `GenerationEngine` interface ([`packages/sdfb-core/src/sdfb_core/engines/base.py`](packages/sdfb-core/src/sdfb_core/engines/base.py)); the LLM runs **O(1) times per run, never per row** ([ADR 0013](docs/adr/0013-distribution-estimator-spine.md)):
+> Design rationale: [`docs/DESIGN.md` §2](docs/DESIGN.md#2-engines-and-the-llm-as-a-distribution-estimator).
+
+Two interchangeable engines behind one `GenerationEngine` interface ([`packages/sdfb-core/src/sdfb_core/engines/base.py`](packages/sdfb-core/src/sdfb_core/engines/base.py)); the LLM runs **O(1) times per run, never per row** ([ADR 0013](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0013-distribution-estimator-spine.md)):
 
 - **`b1_rag` (RAG engine)** — serialize reference rows to text → embed → exact vector index → retrieve representative exemplars → LLM infers per-column value pools **once** → bulk rows sampled vectorized in NumPy on CPU.
 - **`b2_library` (library-wrapper engine)** — wraps the open-source [`sdgx`](https://github.com/hitsz-ids/synthetic-data-generator) synthesizer (CTGAN backend, empirical fallback), fitted once per worker; the LLM only patches free-text columns with bounded value pools.
 
-**RAG retrieval, in brief.** FAISS `IndexFlatIP` (exact inner product over L2-normalized vectors = cosine; deterministic, single-threaded search) holds ≤1,024 vectors per worker. Default retrieval takes the top-k = 8 exemplars nearest the centroid of all row vectors (the most *typical* rows condition the LLM); a greedy k-center mode picks a maximally *diverse* set instead, with a rotating re-seed variant to escape pool stagnation. Free-text columns retrieve exemplar *values* of that column. Rows are serialized GReaT-style ([arXiv 2210.06280](https://arxiv.org/abs/2210.06280)) and the persisted `chunk_text` is byte-identical to what the engine embeds, so stored vectors are safely reusable across runs. Full geometry: [`docs/designs/2026-07-25-rag-retrieval-geometry-roadmap.md`](docs/designs/2026-07-25-rag-retrieval-geometry-roadmap.md).
+**RAG retrieval, in brief.** FAISS `IndexFlatIP` (exact inner product over L2-normalized vectors = cosine; deterministic, single-threaded search) holds ≤1,024 vectors per worker. Default retrieval takes the top-k = 8 exemplars nearest the centroid of all row vectors (the most *typical* rows condition the LLM); a greedy k-center mode picks a maximally *diverse* set instead, with a rotating re-seed variant to escape pool stagnation. Free-text columns retrieve exemplar *values* of that column. Rows are serialized GReaT-style ([arXiv 2210.06280](https://arxiv.org/abs/2210.06280)) and the persisted `chunk_text` is byte-identical to what the engine embeds, so stored vectors are safely reusable across runs. Full geometry: [`docs/designs/2026-07-25-rag-retrieval-geometry-roadmap.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/designs/2026-07-25-rag-retrieval-geometry-roadmap.md).
 
 **Embedder.** [`bge-small-en-v1.5`](https://huggingface.co/BAAI/bge-small-en-v1.5) (MIT): 384-dim sentence embeddings, ~127 MiB on disk — small enough to co-reside with a multi-GB generation model, and demoted to CPU immediately after the bulk embed so vLLM gets the GPU (CUDA is used only when ≥512 MiB VRAM is free). Weights are staged in GCS and loaded offline — never from Hugging Face Hub at runtime.
 
-**Persisted free-text pools.** LLM-generated value pools are stored in BigQuery keyed by `(reference_digest, model_uri, column, target)`. Measured motivation: a 1M-row run without persistence rebuilt pools 36× ≈ **19.1 GPU-hours** of duplicated LLM time ([ADR 0020](docs/adr/0020-freetext-pools-as-persisted-artifact.md)).
+**Persisted free-text pools.** LLM-generated value pools are stored in BigQuery keyed by `(reference_digest, model_uri, column, target)`. Measured motivation: a 1M-row run without persistence rebuilt pools 36× ≈ **19.1 GPU-hours** of duplicated LLM time ([ADR 0020](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0020-freetext-pools-as-persisted-artifact.md)).
 
 ## `generation_plan` — per-type synthesis
 
@@ -149,17 +152,19 @@ Every run emits one structured `generation_plan` milestone log line (engine, per
 | **Freetext** | The only LLM-generated kind: schema-constrained **guided-JSON decoding** fills a bounded pool of novel values, sampled with replacement. `strict_freetext` fails the run loudly rather than silently copying source values. |
 | **Primary key / identity** | Derived per row from `blake2b(run_id, batch_id, row_index, column)` — **never from reference data**; salted `run_id` + deterministic per-batch seeds make runs reproducible and collision-free. |
 
-Per-column **prompt constraints** (operator-declared clauses, length bands, format masks) ride the DDL contract and are enforced by a tiered constraint router ([ADR 0024](docs/adr/0024-structured-prompt-constraint-templates.md), [ADR 0028](docs/adr/0028-constraint-router-relational-plan.md)); the worked Terraform ⇄ `_ddl.json` examples live in [`docs/DDL_CONTRACT_GUIDE.md`](docs/DDL_CONTRACT_GUIDE.md).
+Per-column **prompt constraints** (operator-declared clauses, length bands, format masks) ride the DDL contract and are enforced by a tiered constraint router ([ADR 0024](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0024-structured-prompt-constraint-templates.md), [ADR 0028](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0028-constraint-router-relational-plan.md)); the worked Terraform ⇄ `_ddl.json` examples live in [`docs/DDL_CONTRACT_GUIDE.md`](docs/DDL_CONTRACT_GUIDE.md).
 
 ## Relational generation (PK/FK)
 
-Multi-table generation with **referential integrity by construction**, not post-hoc repair. One versioned model — [`config/relationships/*.yaml`](config/relationships/README.md), never a table description ([ADR 0032](docs/adr/0032-relationships-as-config.md)) — declares PK/FK/identity structure with `enabled` / `enforced` / `drives` flags, and every launcher and worker logs one **relationship card** so the enforced shape is auditable per run.
+> Design rationale: [`docs/DESIGN.md` §4](docs/DESIGN.md#4-relational-generation).
+
+Multi-table generation with **referential integrity by construction**, not post-hoc repair. One versioned model — [`config/relationships/*.yaml`](config/relationships/README.md), never a table description ([ADR 0032](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0032-relationships-as-config.md)) — declares PK/FK/identity structure with `enabled` / `enforced` / `drives` flags, and every launcher and worker logs one **relationship card** so the enforced shape is auditable per run.
 
 **What v0.3.0 changed**, one sentence each:
 
-- **Children are generated FROM their parent's landed keys** ([ADR 0036](docs/adr/0036-parent-driven-fanout-generation.md)): the source's children-per-parent-key histogram is measured once against the source table (cached between launches when `--fk_fanout_stats_table` names one), the child's row count is *derived* from it rather than taken from `--num_rows`, and the PK members that complete the key outside the driving edge are drawn **without replacement per parent key** wherever they are enumerable — so the parent/child ratio, the child's key uniqueness and its referential integrity all hold by construction instead of being rejected afterwards. The two 10M-row launches that motivated this lost 87.9% then 56.5% of their rows to `pk.duplicate`, drawing those same keys at random ([ADR 0035](docs/adr/0035-pk-capacity-fk-bound-members.md)).
-- **A child may have SEVERAL parents** ([ADR 0037](docs/adr/0037-multi-parent-children.md)): the registry gives every enforced edge one of five roles — `driving`, `implied`, `independent`, `conditional`, `external` — and each role its own DAG path, so star schemas, diamonds, trees, chains (1:1 included), forests and a child that reaches both its parent and its grandparent all generate from one declared model. Nothing new is declared: the roles are derived from `cols` and the model's own DAG.
-- **A measured conflict adjusts the model, loudly** ([ADR 0038](docs/adr/0038-measured-conflicts-adjust-the-model.md)): when a full-source measurement of the *declared* `pk:` proves it is not a key of the source, the launch drops that key from the **effective** model for the run, prints a `MODEL ADJUSTED` banner, emits the effective YAML to paste back, and carries on — rather than refusing a five-table launch over a fact the pipeline had just paid to measure. `--on_model_conflict=stop` restores the refusal; a model that contradicts *itself* still stops under both settings.
+- **Children are generated FROM their parent's landed keys** ([ADR 0036](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0036-parent-driven-fanout-generation.md)): the source's children-per-parent-key histogram is measured once against the source table (cached between launches when `--fk_fanout_stats_table` names one), the child's row count is *derived* from it rather than taken from `--num_rows`, and the PK members that complete the key outside the driving edge are drawn **without replacement per parent key** wherever they are enumerable — so the parent/child ratio, the child's key uniqueness and its referential integrity all hold by construction instead of being rejected afterwards. The two 10M-row launches that motivated this lost 87.9% then 56.5% of their rows to `pk.duplicate`, drawing those same keys at random ([ADR 0035](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0035-pk-capacity-fk-bound-members.md)).
+- **A child may have SEVERAL parents** ([ADR 0037](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0037-multi-parent-children.md)): the registry gives every enforced edge one of five roles — `driving`, `implied`, `independent`, `conditional`, `external` — and each role its own DAG path, so star schemas, diamonds, trees, chains (1:1 included), forests and a child that reaches both its parent and its grandparent all generate from one declared model. Nothing new is declared: the roles are derived from `cols` and the model's own DAG.
+- **A measured conflict adjusts the model, loudly** ([ADR 0038](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0038-measured-conflicts-adjust-the-model.md)): when a full-source measurement of the *declared* `pk:` proves it is not a key of the source, the launch drops that key from the **effective** model for the run, prints a `MODEL ADJUSTED` banner, emits the effective YAML to paste back, and carries on — rather than refusing a five-table launch over a fact the pipeline had just paid to measure. `--on_model_conflict=stop` restores the refusal; a model that contradicts *itself* still stops under both settings.
 
 ### The shapes one model can declare
 
@@ -228,14 +233,14 @@ A child with several foreign keys usually shows **one** incoming arrow in the Da
 
 ### The rest of the chain, unchanged
 
-- **Joint FK draws** ([ADR 0031](docs/adr/0031-joint-fk-key-draws.md)): where a child draws from a key pool — an `independent` or `external` edge — FK columns are drawn as **joint key tuples from observed parent combinations**, weighted by IPF-fitted marginals; drawing composite keys per-column would have produced ≥97% orphans on the measured two-table case.
-- **Single-job pipeline** ([ADR 0030](docs/adr/0030-single-job-relational-generation.md)): one Dataflow job generates the whole enabled component, parents first — one vLLM server, table-tagged logs, no cross-job key handoff.
-- **Launch scenarios** ([ADR 0029](docs/adr/0029-fk-model-scenarios-and-history-mappings.md)): minimal-input launches (landing table + flag), derived FK activation, and closure expansion resolve which tables join a run.
+- **Joint FK draws** ([ADR 0031](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0031-joint-fk-key-draws.md)): where a child draws from a key pool — an `independent` or `external` edge — FK columns are drawn as **joint key tuples from observed parent combinations**, weighted by IPF-fitted marginals; drawing composite keys per-column would have produced ≥97% orphans on the measured two-table case.
+- **Single-job pipeline** ([ADR 0030](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0030-single-job-relational-generation.md)): one Dataflow job generates the whole enabled component, parents first — one vLLM server, table-tagged logs, no cross-job key handoff.
+- **Launch scenarios** ([ADR 0029](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0029-fk-model-scenarios-and-history-mappings.md)): minimal-input launches (landing table + flag), derived FK activation, and closure expansion resolve which tables join a run.
 - **Orphan gate**: `fk.orphan` findings are BLOCKER-severity — a run that would land orphaned child rows fails. `fk.unmatched` (ADR 0037) is its deliberate opposite: a driving key whose conditional parent holds no candidate is an *input* fact, dropped before any GPU spend and counted, not a generator regression.
 
 **Measured on Dataflow.** Two launches back the relational path:
 
-- **The R6 pair** ([ADR 0033](docs/adr/0033-pool-ladder-integrity-at-scale.md)): 1M and 10M rows per table with FK enforcement, **0 orphans in 10,000,000 child rows** (job `2026-08-26_05_01_16-3186876581127148459`, aggregates in the [v0.1.0 release report](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/docs/releases/v0.1.0/report.md)). The raw evidence bundle is not in the repository because it held values derived from the source table.
+- **The R6 pair** ([ADR 0033](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0033-pool-ladder-integrity-at-scale.md)): 1M and 10M rows per table with FK enforcement, **0 orphans in 10,000,000 child rows** (job `2026-08-26_05_01_16-3186876581127148459`, aggregates in the [v0.1.0 release report](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/releases/v0.1.0/report.md)). The raw evidence bundle is not in the repository because it held values derived from the source table.
 - **The five-table launch** `2026-09-13_06_10_16-12600311608685394436`: children generated from their parents' landed keys (ADR 0036), a child with two parents (ADR 0037), and a declared key the source disproved, adjusted at launch (ADR 0038). All five tables succeeded.
 
 The chart comes from the two-table run that led to joint key draws. Enforcing each FK column on its own would have orphaned more child rows (97%, a derived bound) than not enforcing at all (82%, measured); drawing whole key tuples leaves none.
@@ -244,13 +249,17 @@ The chart comes from the two-table run that led to joint key draws. Enforcing ea
 
 ## Stats-driven fidelity
 
-Marginal fidelity is driven by a persisted per-column profile (`source_table_stats`: entropy, decile vectors, null/empty fractions, temporal mixes) measured once driver-side ([ADR 0022](docs/adr/0022-stats-driven-generation.md)). Numeric and temporal draws go through **inverse-CDF sampling over 11-point decile vectors** — draws land where the source is dense, instead of uniform-in-range sampling flattening skewed columns:
+> Design rationale: [`docs/DESIGN.md` §5](docs/DESIGN.md#5-fidelity-value-pools-and-constraints).
+
+Marginal fidelity is driven by a persisted per-column profile (`source_table_stats`: entropy, decile vectors, null/empty fractions, temporal mixes) measured once driver-side ([ADR 0022](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0022-stats-driven-generation.md)). Numeric and temporal draws go through **inverse-CDF sampling over 11-point decile vectors** — draws land where the source is dense, instead of uniform-in-range sampling flattening skewed columns:
 
 ![Inverse-CDF sampling over decile vectors](docs/designs/assets/stats-inverse-cdf.png)
 
-Skew is tracked with **normalised entropy** and **`top1_share`** (a balanced enum and one with 85% of rows on a single value have the same distinct count but very different entropy); the entropy gap between source and landing profiles doubles as a free mode-collapse check. The optional `--source_stats=exact` tier adds ONE approximate-aggregate `SELECT` (BigQuery HLL++) over the live table for true cardinality, fixing sample-capped pool starvation. Full geometry and figures: [`docs/designs/2026-08-05-source-table-stats.md`](docs/designs/2026-08-05-source-table-stats.md).
+Skew is tracked with **normalised entropy** and **`top1_share`** (a balanced enum and one with 85% of rows on a single value have the same distinct count but very different entropy); the entropy gap between source and landing profiles doubles as a free mode-collapse check. The optional `--source_stats=exact` tier adds ONE approximate-aggregate `SELECT` (BigQuery HLL++) over the live table for true cardinality, fixing sample-capped pool starvation. Full geometry and figures: [`docs/designs/2026-08-05-source-table-stats.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/designs/2026-08-05-source-table-stats.md).
 
 ## Validation & data quality
+
+> Design rationale: [`docs/DESIGN.md` §7](docs/DESIGN.md#7-validation-and-the-dead-letter-queue).
 
 **Three lines of defense, in-pipeline (Mode A):**
 
@@ -262,15 +271,17 @@ Skew is tracked with **normalised entropy** and **`top1_share`** (a balanced enu
 
 **Thresholds gate.** Severity ladder BLOCKER → job FAILED / CRITICAL / MAJOR / MINOR; the observed blocker ratio is checked against a per-environment budget (dev 20% · uat 5% · prd 1%). The gate fires *after* BigQuery load jobs commit, so the audit row always lands even when the run fails. Every run writes one summary row to `synthetic_data_quality.validation_runs`.
 
-**Memorization gate.** Any identical real/synthetic row match, or a per-column `copy_ratio` at/above the privacy threshold on a high-cardinality column, fails the run — in every environment (pass criteria: [`docs/RUN_PLAYBOOK.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/docs/RUN_PLAYBOOK.md)).
+**Memorization gate.** Any identical real/synthetic row match, or a per-column `copy_ratio` at/above the privacy threshold on a high-cardinality column, fails the run — in every environment (pass criteria: [`docs/RUN_PLAYBOOK.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/RUN_PLAYBOOK.md)).
 
 **Evaluation framework** (branch `ws3-eval-framework`, merge pending): Tier 1 statistical metrics (KS/Wasserstein, total variation, PSI/JSD, correlation & mutual-information drift, DCR/NNDR privacy distances), Tier 2 SDMetrics quality/diagnostic reports → a single 0–1 `fidelity_overall_score`, Tier 3 opt-in SynthEval/Evidently.
 
 ## CPU/GPU split & vLLM serving
 
+> Design rationale, including why this is not Beam's `vllm_inference` handler: [`docs/DESIGN.md` §3](docs/DESIGN.md#3-serving-a-vllm-server-owned-by-the-engine).
+
 - One homogeneous worker pool per job; the split is **by stage, not by machine**: bulk row synthesis, validation, and IO are pure CPU (vectorized NumPy); the GPU is touched O(1) — free-text pool building via vLLM, plus the optional embedding pass.
 - Machine matrix: **L4 → `g2-standard-8`** · **T4 → `n1-standard-8` + T4** (cost-capped experimentation) · **`e2-standard-8`, no GPU** for fake-client CI tiers.
-- **vLLM spawn**: each worker warm-pulls model weights from GCS to local SSD once (idempotent marker + file lock), then spawns a single vLLM OpenAI-server subprocess owned by the engine's DoFn lifecycle ([ADR 0014](docs/adr/0014-vllm-model-client-owns-server.md)). VRAM is measured first — `gpu_memory_utilization` and `max-model-len` are fitted to actual free memory *before* spawn.
+- **vLLM spawn**: each worker warm-pulls model weights from GCS to local SSD once (idempotent marker + file lock), then spawns a single vLLM OpenAI-server subprocess owned by the engine's DoFn lifecycle ([ADR 0014](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0014-vllm-model-client-owns-server.md)). VRAM is measured first — `gpu_memory_utilization` and `max-model-len` are fitted to actual free memory *before* spawn.
 - **Resilience**: server shared across threads via lock + refcount; spawn-failure suppression after 3 strikes; a lost spawn race adopts the healthy server instead of killing it. Up to 4 threads build column pools concurrently against vLLM's continuous batching; byte-identical prompt prefixes exploit [vLLM automatic prefix caching](https://docs.vllm.ai/en/latest/features/automatic_prefix_caching.html).
 - **Autoscaling deliberately capped** (max workers 1–4) — GPU capacity and spend stay bounded; `no_use_multiple_sdk_containers` gives exactly one SDK process the GPU; all sinks use BigQuery **`FILE_LOADS`** (batch-shaped, cheaper than streaming inserts).
 
@@ -298,33 +309,34 @@ composer/              Airflow DAG for scheduled Dataflow launches
 public_cloud/deploy/gcp/  personal-GCP E2E layer (bootstrap, cost caps, run driver)
 ```
 
-- **GPU machine / M4 onboarding** → [`docs/M4_SETUP.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/docs/M4_SETUP.md)
+- **GPU machine / M4 onboarding** → [`docs/M4_SETUP.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/M4_SETUP.md)
 - **What must exist before a run** (buckets, datasets, IAM) → [`docs/DEPLOYMENT_PREREQUISITES.md`](docs/DEPLOYMENT_PREREQUISITES.md)
-- **Personal-GCP cost-capped runs** → [`public_cloud/deploy/gcp/README.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/public_cloud/deploy/gcp/README.md)
+- **Personal-GCP cost-capped runs** → [`public_cloud/deploy/gcp/README.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/public_cloud/deploy/gcp/README.md)
 - **Model weight layout in GCS** → [`docs/MODEL_LAYOUT.md`](docs/MODEL_LAYOUT.md)
 
 ## CI/CD
 
-Builds are CI-driven, never local Docker builds ([ADR 0008](docs/adr/0008-ci-driven-builds.md)). The public build path is Cloud Build: the one GPU image for launcher and workers goes to Artifact Registry, then the Flex Template is built from it. The GitHub Actions in this repository run the laptop suite and the release layer. Every merge to master is tagged with SemVer derived from the squash-merge title, and the release Action regenerates [`docs/releases/`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/docs/releases/README.md) — a deterministic before/after metrics report diffed from committed evidence bundles, no GCP access needed. Worker-image registry decision: [ADR 0015](docs/adr/0015-worker-image-via-artifact-registry.md); a runnable build-and-deploy path on your own project: [`public_cloud/deploy/gcp/README.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/public_cloud/deploy/gcp/README.md).
+Builds are CI-driven, never local Docker builds ([ADR 0008](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0008-ci-driven-builds.md)). The public build path is Cloud Build: the one GPU image for launcher and workers goes to Artifact Registry, then the Flex Template is built from it. The GitHub Actions in this repository run the laptop suite and the release layer. Every merge to master is tagged with SemVer derived from the squash-merge title, and the release Action regenerates [`docs/releases/`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/releases/README.md) — a deterministic before/after metrics report diffed from committed evidence bundles, no GCP access needed. Worker-image registry decision: [ADR 0015](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0015-worker-image-via-artifact-registry.md); a runnable build-and-deploy path on your own project: [`public_cloud/deploy/gcp/README.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/public_cloud/deploy/gcp/README.md).
 
 ## Integration testing & validation reports
 
 Real-run evidence flows through a fixed contract:
 
-- **Run** a tier from the run matrix ([`docs/E2E_TEST_MATRIX.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/docs/E2E_TEST_MATRIX.md)) per the playbook ([`docs/RUN_PLAYBOOK.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/docs/RUN_PLAYBOOK.md)) — GPU verdicts, Dataflow options, capacity strategy, pass criteria, launch recipes.
+- **Run** a tier from the run matrix ([`docs/E2E_TEST_MATRIX.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/E2E_TEST_MATRIX.md)) per the playbook ([`docs/RUN_PLAYBOOK.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/RUN_PLAYBOOK.md)) — GPU verdicts, Dataflow options, capacity strategy, pass criteria, launch recipes.
 - **Land** metrics + reports in the local, gitignored `runs/<JOB_ID>/` bundle (`real/` verbatim, `oss/` alias-redacted twins).
 - **Promote** bundles a release cites to `docs/releases/<version>/evidence/<JOB_ID>/` — the layout the release Action reads. Evidence bundles stay out of the public repo (the sensitive-content gate in `scripts/dsg/precheck.py` forbids that path); published releases carry the aggregate report only.
-- **Interpret** with the report generators in [`.github/prompts/`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/.github/prompts): the end-to-end validation report, the free-text crosscheck report, and the prompt-constraint recommender.
+- **Interpret** with the report generators in [`.github/prompts/`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/.github/prompts): the end-to-end validation report, the free-text crosscheck report, and the prompt-constraint recommender.
 
 ## Documentation map
 
 | Layer | Where | What |
 |---|---|---|
-| Decisions | [`docs/adr/`](docs/adr/README.md) | 38 ADRs — every locked decision with alternatives and primary-source citations |
-| Designs | [`docs/designs/`](docs/designs/) | visual-first design docs with regenerable figures ([`docs/designs/assets/`](docs/designs/assets/)) |
+| Design | [`docs/DESIGN.md`](docs/DESIGN.md) | the design in one document: architecture, engines, serving, relational generation, fidelity, throughput, validation, and a map of every ADR the code cites |
+| Decisions | [`docs/adr/`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/README.md) | every locked decision with alternatives and primary-source citations |
+| Designs | [`docs/designs/`](docs/designs/) | per-topic visual-first design docs with regenerable figures ([`docs/designs/assets/`](docs/designs/assets/)) |
 | Guides | [`docs/`](docs/) | run playbook, deployment prerequisites, DDL contract guide, model layout, E2E matrix |
-| Releases | [`docs/releases/`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/docs/releases/README.md) | per-version deterministic reports (aggregate metrics and charts) |
-| Articles | [`docs/articles/`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/docs/articles/README.md) | the Medium series — VCS-tracked, kept in sync with the implementation |
+| Releases | [`docs/releases/`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/releases/README.md) | per-version deterministic reports (aggregate metrics and charts) |
+| Articles | [`docs/articles/`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/articles/README.md) | the Medium series — VCS-tracked, kept in sync with the implementation |
 
 ## Glossary
 
@@ -411,21 +423,21 @@ Apache-2.0.
 | Claim / number | Source of truth |
 |---|---|
 | 1,815 laptop tests (2026-09-15) | `uv run pytest -m "not gpu and not gcp" --collect-only -q` on `master` → `1815/1816 tests collected (1 deselected)` |
-| Children generated from parent keys — ratio, PK uniqueness and FK integrity by construction | [ADR 0036](docs/adr/0036-parent-driven-fanout-generation.md) · `packages/sdfb-tests/tests/unit/test_fanout_three_tables.py` (DirectRunner, three-table shape) |
-| Star / diamond / tree / chain / forest / grandparent all resolve to roles, and generate | [ADR 0037](docs/adr/0037-multi-parent-children.md) · `packages/sdfb-tests/tests/unit/contracts/test_relationship_shapes.py` (registry) · `packages/sdfb-tests/tests/unit/test_fanout_shapes.py` (DirectRunner, whole-tuple FK checks) |
-| A measured PK conflict adjusts the effective model instead of stopping the launch | [ADR 0038](docs/adr/0038-measured-conflicts-adjust-the-model.md) · `packages/sdfb-tests/tests/unit/cli/test_model_adjustment.py` · `packages/sdfb-tests/tests/unit/test_fanout_adjusted_pk.py` |
-| 87.9% then 56.5% `pk.duplicate` on random draws of an FK-bearing PK (10M rows/table) | [ADR 0035](docs/adr/0035-pk-capacity-fk-bound-members.md) — launches `2026-09-09_09_00_54-…`, `2026-09-09_16_44_42-…` |
-| 0 orphans / 10,000,000 child rows (R6 FK-enforced pair) | job `2026-08-26_05_01_16-3186876581127148459` · [v0.1.0 release report](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/docs/releases/v0.1.0/report.md) (raw bundle withdrawn: it contained source-derived values) · [ADR 0033](docs/adr/0033-pool-ladder-integrity-at-scale.md) |
-| Five-table relational launch, all tables succeeded | job `2026-09-13_06_10_16-12600311608685394436` · acceptance recorded in [ADR 0037](docs/adr/0037-multi-parent-children.md) and [ADR 0038](docs/adr/0038-measured-conflicts-adjust-the-model.md) |
-| 19.1 GPU-hours of duplicated pool builds (1M-row run, 36 rebuilds) | [ADR 0020](docs/adr/0020-freetext-pools-as-persisted-artifact.md) |
-| ~7,257 CPU-s bulk generation for 1M rows; batched Pandera bounds | [`docs/designs/2026-07-27-ws6-pipeline-shape.md`](docs/designs/2026-07-27-ws6-pipeline-shape.md) |
-| Embedder bytes (133,466,304 B fp32), 512 MiB VRAM gate, CPU demotion | `packages/sdfb-core/src/sdfb_core/rag/embedding.py`, [ADR 0019](docs/adr/0019-rag-population-scoped-to-consumers.md) |
-| Retrieval geometry (centroid top-k=8, k-center) + figures | [`docs/designs/2026-07-25-rag-retrieval-geometry-roadmap.md`](docs/designs/2026-07-25-rag-retrieval-geometry-roadmap.md) |
+| Children generated from parent keys — ratio, PK uniqueness and FK integrity by construction | [ADR 0036](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0036-parent-driven-fanout-generation.md) · `packages/sdfb-tests/tests/unit/test_fanout_three_tables.py` (DirectRunner, three-table shape) |
+| Star / diamond / tree / chain / forest / grandparent all resolve to roles, and generate | [ADR 0037](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0037-multi-parent-children.md) · `packages/sdfb-tests/tests/unit/contracts/test_relationship_shapes.py` (registry) · `packages/sdfb-tests/tests/unit/test_fanout_shapes.py` (DirectRunner, whole-tuple FK checks) |
+| A measured PK conflict adjusts the effective model instead of stopping the launch | [ADR 0038](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0038-measured-conflicts-adjust-the-model.md) · `packages/sdfb-tests/tests/unit/cli/test_model_adjustment.py` · `packages/sdfb-tests/tests/unit/test_fanout_adjusted_pk.py` |
+| 87.9% then 56.5% `pk.duplicate` on random draws of an FK-bearing PK (10M rows/table) | [ADR 0035](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0035-pk-capacity-fk-bound-members.md) — launches `2026-09-09_09_00_54-…`, `2026-09-09_16_44_42-…` |
+| 0 orphans / 10,000,000 child rows (R6 FK-enforced pair) | job `2026-08-26_05_01_16-3186876581127148459` · [v0.1.0 release report](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/releases/v0.1.0/report.md) (raw bundle withdrawn: it contained source-derived values) · [ADR 0033](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0033-pool-ladder-integrity-at-scale.md) |
+| Five-table relational launch, all tables succeeded | job `2026-09-13_06_10_16-12600311608685394436` · acceptance recorded in [ADR 0037](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0037-multi-parent-children.md) and [ADR 0038](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0038-measured-conflicts-adjust-the-model.md) |
+| 19.1 GPU-hours of duplicated pool builds (1M-row run, 36 rebuilds) | [ADR 0020](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0020-freetext-pools-as-persisted-artifact.md) |
+| ~7,257 CPU-s bulk generation for 1M rows; batched Pandera bounds | [`docs/designs/2026-07-27-ws6-pipeline-shape.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/designs/2026-07-27-ws6-pipeline-shape.md) |
+| Embedder bytes (133,466,304 B fp32), 512 MiB VRAM gate, CPU demotion | `packages/sdfb-core/src/sdfb_core/rag/embedding.py`, [ADR 0019](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0019-rag-population-scoped-to-consumers.md) |
+| Retrieval geometry (centroid top-k=8, k-center) + figures | [`docs/designs/2026-07-25-rag-retrieval-geometry-roadmap.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/designs/2026-07-25-rag-retrieval-geometry-roadmap.md) |
 | Eval metrics + memorization-gate identifiers | branch `ws3-eval-framework`: `sdfb_core/evaluation/`, `config/thresholds.yml` (merge pending) |
-| Machine matrix, SDK-container and worker caps | [`docs/RUN_PLAYBOOK.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/d32c34743d80c8481445956939b6bbde9c4d4a3c/docs/RUN_PLAYBOOK.md), `composer/synthetic_beam_bigquery.py`, `public_cloud/deploy/gcp/tiers.yaml` |
-| Engine-owned vLLM server (not Beam RunInference) | [ADR 0014](docs/adr/0014-vllm-model-client-owns-server.md) |
+| Machine matrix, SDK-container and worker caps | [`docs/RUN_PLAYBOOK.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/RUN_PLAYBOOK.md), `composer/synthetic_beam_bigquery.py`, `public_cloud/deploy/gcp/tiers.yaml` |
+| Engine-owned vLLM server (not Beam RunInference) | [ADR 0014](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0014-vllm-model-client-owns-server.md) |
 | Beam Summit 2025 acceptance | session *"Building Banking Synthetic Data for a Lakehouse with Gemma"* — [beamsummit.org](https://beamsummit.org) (accepted 2025-05-10) |
-| Stats glossary terms + primary-source citations (Shannon 1948, Devroye 1986, Heule et al. 2013) | [ADR 0022](docs/adr/0022-stats-driven-generation.md), [`docs/designs/2026-08-05-source-table-stats.md`](docs/designs/2026-08-05-source-table-stats.md) |
+| Stats glossary terms + primary-source citations (Shannon 1948, Devroye 1986, Heule et al. 2013) | [ADR 0022](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/adr/0022-stats-driven-generation.md), [`docs/designs/2026-08-05-source-table-stats.md`](https://github.com/albertols/synthetic-llm-dataflow-bigquery/blob/4cba0b6053cf7e9b28434d339ff6e927c981b041/docs/designs/2026-08-05-source-table-stats.md) |
 | Architecture figure | [`docs/assets/architecture-overview.drawio`](docs/assets/architecture-overview.drawio) → `.png` (next-ai-drawio MCP export, 2026-08-31) |
 
 </details>
