@@ -63,6 +63,10 @@ run "deployment_contract" {
     error_message = "Gemma 4 E4B-it from Hugging Face on an L4 (G2, dtype auto) is the default."
   }
   assert {
+    condition     = endswith(local.gpu.accelerator, "install-nvidia-driver:latest")
+    error_message = "The L4 needs Dataflow's latest driver: the image's CUDA 13 torch wheels need driver 580+, and the default driver (535, CUDA 12.2) leaves torch without a GPU."
+  }
+  assert {
     condition     = length(module.buckets) == 0 && length(google_compute_subnetwork_iam_member.dataflow_network_user) == 0 && length(google_dataflow_flex_template_job.generation) == 0
     error_message = "Existing bucket, default network and no Terraform launch are the defaults."
   }

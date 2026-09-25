@@ -44,12 +44,15 @@ locals {
   # capability 8.0: an L4 (8.9, 24 GB) serves the bf16 checkpoints as they
   # are, while a T4 (7.5, 16 GB) serves Qwen downcast to fp16 and cannot run
   # Gemma, whose fp16 activations overflow (config/models.yml). The T4 driver
-  # pin follows Dataflow's vLLM guidance (docs/RUN_PLAYBOOK.md).
+  # pin follows Dataflow's vLLM guidance (docs/RUN_PLAYBOOK.md). The L4 asks
+  # for Dataflow's latest driver: the image's torch wheels bundle the CUDA 13
+  # runtime, which needs driver 580+, while the default driver (535, CUDA
+  # 12.2) leaves torch without a usable GPU.
   gpu_profiles = {
     l4 = {
       machine_family = "g2"
       machine_type   = "g2-standard-8"
-      accelerator    = "type:nvidia-l4;count:1;install-nvidia-driver"
+      accelerator    = "type:nvidia-l4;count:1;install-nvidia-driver:latest"
       vllm_dtype     = "auto"
       models         = ["gemma4-e4b-it", "qwen3-4b"]
     }
